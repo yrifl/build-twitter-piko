@@ -106,13 +106,13 @@ build_variant() {
     local variant_name="$1"
     local include_dynamic_color="$2"
 
-    local -a excludes=()
+    local -a includes=()
 
-    if [ "$variant_name" != "twitter" ]; then
-        excludes+=(-d "Bring back twitter")
+    if [ "$variant_name" = "twitter" ]; then
+        includes+=(-e "Bring back twitter")
     fi
-    if [ "$include_dynamic_color" != "true" ]; then
-        excludes+=(-d "Dynamic color")
+    if [ "$include_dynamic_color" = "true" ]; then
+        includes+=(-e "Dynamic color")
     fi
 
     local suffix=""
@@ -127,7 +127,7 @@ build_variant() {
 
     echo "[patch] Building ${output_name}..."
     java -jar "$MORPHE_JAR" patch \
-        --patches "$PIKO_MPP" "${excludes[@]}" \
+        --patches "$PIKO_MPP" "${includes[@]}" \
         --patches "$XSHIM_MPP" "${XSHIM_ARGS[@]}" \
         --out "$apk_path" \
         "$variant_input"
