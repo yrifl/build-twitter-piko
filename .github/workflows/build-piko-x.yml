@@ -1,0 +1,80 @@
+name: Build Piko X
+
+on:
+  workflow_dispatch:
+    inputs:
+      x_version:
+        description: "X/Twitter version (empty = latest)"
+        required: false
+        default: ""
+      apk_url:
+        description: "Direct APK download URL (skip ApkMirror)"
+        required: false
+        default: ""
+
+  schedule:
+    - cron: "0 6 * * 0"
+
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - ".github/workflows/**"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq curl jq python3-pip
+          pip3 install -q cloudscraper
+
+      - name: Resolve versions
+        id: versions
+        run: |
+          source scripts/versions.sh
+          resolve_versions "${{ inputs.x_version || '' }}"
+          echo "x_version=${X_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "piko_version=${PIKO_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "morphe_version=${MORPHE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "xshim_version=${XSHIM_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build patched APK
+        env:
+          APK_URL: ${{ inputs.apk_url || '' }}
+        run: |
+          bash scripts/patch.sh "${{ steps.versions.outputs.x_version }}"
+
+      - name: Create Release
+        if: success() && github.event_name != 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.versions.outputs.x_version }}"
+          PIKO_VER="${{ steps.versions.outputs.piko_version }}"
+          MORPHE_VER="${{ steps.versions.outputs.morphe_version }}"
+          XSHIM_VER="${{ steps.versions.outputs.xshim_version }}"
+          if gh release view "$TAG" &>/dev/null; then
+            echo "Release $TAG already exists — skipping"
+          else
+            NOTES=$(printf "Built with:\n- [Piko v${PIKO_VER}](https://github.com/crimera/piko/releases/tag/v${PIKO_VER})\n- [X-Shim v${XSHIM_VER}](https://gitlab.com/inotia00/x-shim/-/releases/v${XSHIM_VER})\n- [Morphe CLI v${MORPHE_VER}](https://github.com/MorpheApp/morphe-cli/releases/tag/v${MORPHE_VER})")
+            gh release create "$TAG" \
+              output/*.apk \
+              --title "$TAG" \
+              --notes "$NOTES" \
+              --target "${{ github.sha }}"
+          fi
+

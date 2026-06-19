@@ -1,0 +1,8 @@
+cache/
+downloads/
+output/
+*.apk
+*.apkm
+*.jar
+*.mpp
+scripts/options-ci.json
