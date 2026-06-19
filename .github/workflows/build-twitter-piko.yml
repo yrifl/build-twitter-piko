@@ -1,4 +1,4 @@
-name: Build Piko X
+name: Build Twitter Piko
 
 on:
   workflow_dispatch:
