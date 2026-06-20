@@ -11,9 +11,14 @@ on:
         description: "Direct APK download URL (skip ApkMirror)"
         required: false
         default: ""
+      backfill:
+        description: "Build all missing versions (from oldest to newest)"
+        required: false
+        default: false
+        type: boolean
 
   schedule:
-    - cron: "0 6 * * 0"
+    - cron: "0 6 */3 * *"
 
   push:
     branches: [main]
@@ -42,7 +47,14 @@ jobs:
           sudo apt-get install -y -qq curl jq python3-pip
           pip3 install -q cloudscraper
 
+      - name: Backfill all missing versions
+        if: ${{ inputs.backfill }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/backfill.sh
+
       - name: Resolve versions
+        if: ${{ !inputs.backfill }}
         id: versions
         run: |
           source scripts/versions.sh
@@ -53,13 +65,14 @@ jobs:
           echo "xshim_version=${XSHIM_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Build patched APK
+        if: ${{ !inputs.backfill }}
         env:
           APK_URL: ${{ inputs.apk_url || '' }}
         run: |
           bash scripts/patch.sh "${{ steps.versions.outputs.x_version }}"
 
       - name: Create Release
-        if: success() && github.event_name != 'push'
+        if: ${{ !inputs.backfill && success() && github.event_name != 'push' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -77,4 +90,3 @@ jobs:
               --notes "$NOTES" \
               --target "${{ github.sha }}"
           fi
-
