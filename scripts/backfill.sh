@@ -53,7 +53,22 @@ fi
 
 echo "[backfill] Fetching available versions from ApkMirror..."
 ALL_VERSIONS=$(python3 "$SCRIPT_DIR/download-apk.py" x-corp twitter \
-    --list-versions 2>/dev/null | sed 's/ *\[.*\]$//' | grep -v -E '(beta|alpha)' || true)
+    --list-versions 2>/dev/null | sed 's/ *\[.*\]$//' | python3 -c "
+import sys
+for line in sys.stdin:
+    v = line.strip()
+    if not v:
+        continue
+    if 'beta' in v or 'alpha' in v:
+        continue
+    parts = v.split('.')
+    try:
+        major, minor = int(parts[0]), int(parts[1])
+    except (ValueError, IndexError):
+        continue
+    if major > 11 or (major == 11 and minor >= 99):
+        print(v)
+" || true)
 
 if [ -z "$ALL_VERSIONS" ]; then
     echo "[backfill] Could not fetch version list from ApkMirror" >&2
