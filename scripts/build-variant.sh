@@ -105,15 +105,24 @@ build_variant() {
     cp "$APK_FILE" "$variant_input"
 
     echo "[build] Building ${output_name}..."
+    local log_file="$PROJECT_DIR/cache/${output_name}.log"
     java -jar "$MORPHE_JAR" patch \
         "${includes[@]}" \
         "${XSHIM_ARGS[@]}" \
         --patches "$PIKO_MPP" \
         --patches "$XSHIM_MPP" \
         --out "$apk_path" \
-        "$variant_input"
+        "$variant_input" 2>&1 | tee "$log_file"
 
     rm -f "$variant_input"
+
+    # Sanity check: at least one Piko patch must have been applied
+    local applied
+    applied=$(grep -c "Applying" "$log_file" || true)
+    if [ "$applied" -le "${#XSHIM_PATCHES[@]}" ]; then
+        echo "[build] ERROR: ${output_name} — only ${applied} patches applied (all Piko patches likely incompatible)" >&2
+        return 1
+    fi
 
     if [ ! -f "$apk_path" ]; then
         local actual

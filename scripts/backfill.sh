@@ -114,7 +114,12 @@ while IFS= read -r version; do
     fi
 
     # Build 4 variants
-    build_all_variants
+    if ! build_all_variants; then
+        echo "[backfill] WARNING: Piko patches incompatible with ${version}, skipping" >&2
+        rm -f "$PROJECT_DIR"/output/*.apk
+        rm -f "$PROJECT_DIR"/cache/*.apkm "$PROJECT_DIR"/cache/*.log
+        continue
+    fi
 
     # Create GitHub release
     echo "[backfill] Creating release ${version}..."
