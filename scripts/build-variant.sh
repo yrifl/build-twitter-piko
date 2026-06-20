@@ -106,8 +106,10 @@ build_variant() {
 
     echo "[build] Building ${output_name}..."
     java -jar "$MORPHE_JAR" patch \
-        --patches "$PIKO_MPP" "${includes[@]}" \
-        --patches "$XSHIM_MPP" "${XSHIM_ARGS[@]}" \
+        "${includes[@]}" \
+        "${XSHIM_ARGS[@]}" \
+        --patches "$PIKO_MPP" \
+        --patches "$XSHIM_MPP" \
         --out "$apk_path" \
         "$variant_input"
 
