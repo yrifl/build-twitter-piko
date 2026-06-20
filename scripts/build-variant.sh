@@ -118,7 +118,7 @@ build_variant() {
 
     # Sanity check: at least one Piko patch must have been applied
     local applied
-    applied=$(grep -c "Applying" "$log_file" || true)
+    applied=$(grep -c "Applied" "$log_file" || true)
     if [ "$applied" -le "${#XSHIM_PATCHES[@]}" ]; then
         echo "[build] ERROR: ${output_name} — only ${applied} patches applied (all Piko patches likely incompatible)" >&2
         return 1
